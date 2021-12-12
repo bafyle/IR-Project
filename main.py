@@ -16,6 +16,7 @@ def remove_stop_words(words: List[str]):
     for index, word in enumerate(words):
         if word in stop_words:
             words.pop(index)
+
     return words
 
 def remove_punc(words: List[str]):
@@ -26,6 +27,9 @@ def remove_punc(words: List[str]):
 
 
 def query_optimization(query: str) -> list:
+    """
+    return a list of all tokens in the query after preprocessing
+    """
     return remove_punc(remove_stop_words(word_tokenize(query.strip().lower())))
 
 def convert_documents_to_tokens() -> dict:
@@ -100,6 +104,17 @@ def build_terms(documents_tokens):
     return terms
 
 
+def display_terms(terms: list[Term]):
+    """
+    Displays all terms in the same structure as asked in the project requirements PDF
+    """
+    for term in terms:
+        row = f"{term.word}, {term.frequency}\n"
+        for document, positions in term.postings_list.items():
+            row +=f"{document}: {positions}\n"
+        print(row)
+
+
 def apply_query_on_documents(query: List[str], terms: List[Term]) -> Dict:
     """
     Apply a query on the documents and return a dictionary with all documents that contain the query
@@ -172,11 +187,15 @@ def compute_documents_lengths(terms: list, number_of_documents: int) -> list:
     return output
 
 def compute_similarity(document_ID, query_terms, terms) -> float:
-    tfidfs = list()
+    """
+    This function computes the similarity between a query and a document
+    """
+    tfidfs = list() # list of all TF.IDF of all terms for that document
     for term in terms:
         tfidfs.append(term.get_TF_IDF(document_ID))
-    output = 0
+    
 
+    output = 0 # output will be equal to the sum of product of all normalized values in the query with all terms' normalized values for that document
     for key in query_terms:
         output += query_terms[key]['normalized'] * terms[Term.search_for_term(terms, key)].get_normalized_length(tfidfs, document_ID)
     return output
@@ -184,32 +203,51 @@ def compute_similarity(document_ID, query_terms, terms) -> float:
 if __name__ == "__main__":
     
     terms = build_terms(convert_documents_to_tokens())
-    query = "information retrieval"
+
+    # display_terms(terms)
+    
+    query = "An information retrieval process begins when a user enters a query into the system"
     query_tokens = query_optimization(query)
     print(f"Query: {query_tokens}")
     docs_matched = apply_query_on_documents(query_tokens, terms)
     print(f"documents matched: {docs_matched}")
 
-    # display_TF_IDF_matrix(terms)
-
     if len(docs_matched) > 0:
+        # Display TF.IDF matrix
+        # display_TF_IDF_matrix(terms)
         documents_lengths = compute_documents_lengths(terms, Term.documents_number)
 
+        # compute similarities with the query and all documents
+        """
+            Calculating the similarities require term frequency and its weight, IDF, TF.IDF and the term frequency in all documents (DF)
+            - The TF and TF weight in all tokens in the query are 1
+            - The IDF value of the query token is the same as the document term
+               we just searched for the term in the list of terms, grabbed the IDF value from it and
+               set it to query token IDF
+            - Document frequency is the same for this term in all of documents
+        """
+        # Building the structure of the tokens from the query
         similarity_query_terms = dict()
         for query_token in query_tokens:
             similarity_query_terms[query_token] = {'tf': 1, 'tf_weight': 1, 'idf': terms[Term.search_for_term(terms, query_token)].IDF, 'df': terms[Term.search_for_term(terms, query_token)].frequency}
 
+        # Calculating the query length
         sum_of_query_IDFS = 0
         for value in similarity_query_terms.values():
             value['tf_idf'] = value['tf_weight'] * math.log10(Term.documents_number/value['df'])
             sum_of_query_IDFS += value['tf_idf'] ** 2
-
         query_length = math.sqrt(sum_of_query_IDFS)
 
+        # Calculating the normalized TF.IDF weight, which is equal to TF.IDF / query length
         for value in similarity_query_terms.values():
             value['normalized'] = value['tf_idf'] / query_length
 
+        # Calculating the similarities with all documents and the query
+        document_similarities = dict()
         for i in range(Term.documents_number):
-            print(f"Similarity between the query and document number {i} is {compute_similarity(i, similarity_query_terms, terms)}")
+            document_similarities[i] = compute_similarity(i, similarity_query_terms, terms)
+        sorted_document_similarities_indices = sorted(document_similarities, key=lambda x: document_similarities[x], reverse=True)
         
+        for i in range(Term.documents_number):
+            print(f"Similarity between the query and document number {sorted_document_similarities_indices[i]} is {document_similarities.get(sorted_document_similarities_indices[i])}")
         
