@@ -56,7 +56,7 @@ class Term:
         Equal operator overloading
         """
         if type(__o) == Term:
-            return __o.term == self.word
+            return __o.word == self.word
         elif type(__o) == str:
             return __o == self.word
 
@@ -151,10 +151,3 @@ class Term:
         for idf in tfidf:
             sqrt_number += idf ** 2
         return math.sqrt(sqrt_number)
-
-
-    @staticmethod
-    def refresh_IDF(terms: list):
-        for term in terms:
-            term.IDF = math.log10(Term.documents_number/term.frequency)
-        

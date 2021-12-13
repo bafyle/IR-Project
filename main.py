@@ -48,7 +48,12 @@ def convert_documents_to_tokens() -> dict:
     default_documents = glob.glob(r'default files/*.txt')
     
     # load default documents if custom documents is empty (files directory is empty)
-    documents = custom_documents if len(custom_documents) > 0 else default_documents
+    if len(custom_documents) > 0:
+        print("loading all documents in files/")
+        documents = custom_documents
+    else:
+        print("loading all default documents")
+        documents = default_documents
     
     # set documents number
     Term.documents_number = len(documents)
@@ -131,28 +136,68 @@ def apply_query_on_documents(query: List[str], terms: List[Term]) -> Dict:
     
     results = dict()
     if len(indices) >= 2:
-        post1 = terms[indices[0]].postings_list ##UNHANDLED CASE: indices maybe empty
-        post2 = terms[indices[1]].postings_list
+        post1 = terms[indices[0]].postings_list
         indices.pop(0)
-        while len(indices) :
+        while len(indices):
             post2 = terms[indices[0]].postings_list
-            for key, post1_value in post1.items():
-                if key in post2:
-                    positions = []
-                    post2_value = post2[key]
-                    for i in post1_value:
-                        for f in post2_value:
-                            if abs(i-f) == 1:
-                                positions.append(max(i, f))
-                    if any(positions):
-                        results[key] = positions
-            post1 = results
+            post1_keys = [key for key in post1]
+            post2_keys = [key for key in post2]
+            while min(len(post1_keys), len(post2_keys)) != 0:
+                if post1_keys[0] == post2_keys[0]:
+                    positions_list = list()
+                    positions1 = post1[post1_keys[0]]
+                    positions2 = post2[post2_keys[0]]
+                    while min(len(positions1), len(positions2)) != 0:
+                        if positions2[0] - positions1[0] == 1:
+                            positions_list.append(positions2[0])
+                            positions1.pop(0)
+                            positions2.pop(0)
+                        else:
+                            if positions1[0] > positions2[0]:
+                                positions1.pop(0)
+                            else:
+                                positions2.pop(0)
+                    if any(positions_list):
+                        results[post1_keys[0]] = positions_list
+                    post1_keys.pop(0)
+                    post2_keys.pop(0)
+                else:
+                    if post1_keys[0] > post2_keys[0]:
+                        post1_keys.pop(0)
+                    else:
+                        post2_keys.pop(0)
             indices.pop(0)
     else:
         if len(indices) == 1:
             results = terms[indices[0]].postings_list
         else:
             results = {}
+
+    
+    # if len(indices) >= 2:
+    #     post1 = terms[indices[0]].postings_list
+    #     indices.pop(0)
+    #     while len(indices):
+    #         post2 = terms[indices[0]].postings_list
+    #         for key, post1_value in post1.items():
+    #             for key2, post2_value in post2.items():
+    #                 if key == key2:
+    #                     positions1 = []
+    #                     for i in post1_value:
+    #                         for f in post2_value:
+    #                             if abs(i-f) == 1:
+    #                                 positions1.append(max(i, f))
+    #                     if any(positions1):
+    #                         results[key] = positions1
+    #             if key in post2:
+    #                 pass   
+    #         post1 = results
+    #         indices.pop(0)
+    # else:
+    #     if len(indices) == 1:
+    #         results = terms[indices[0]].postings_list
+    #     else:
+    #         results = {}
     return results
 
 ############## Part 3 ##############
