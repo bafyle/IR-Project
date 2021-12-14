@@ -32,6 +32,7 @@ def query_optimization(query: str) -> list:
     """
     return remove_punc(remove_stop_words(word_tokenize(query.strip().lower())))
 
+
 def convert_documents_to_tokens() -> dict:
     """
     Returns dictionary, each key in it is a document ID and the value for each key is
@@ -77,6 +78,7 @@ def convert_documents_to_tokens() -> dict:
 
 ############## Part 2 ##############
 
+
 def get_distincit_tokens(documents_tokens):
     """
     Return a sorted list with all distinct tokens
@@ -89,7 +91,7 @@ def get_distincit_tokens(documents_tokens):
     # print(tokens_set)
     return tokens_set
 
-def build_terms(documents_tokens):
+def build_terms(documents_tokens) -> list[Term]:
     """
     Return a list of terms from all tokens that is brought from the documents collection
     """
@@ -153,7 +155,7 @@ def apply_query_on_documents(query: List[str], terms: List[Term]) -> Dict:
                             positions1.pop(0)
                             positions2.pop(0)
                         else:
-                            if positions1[0] > positions2[0]:
+                            if positions1[0] < positions2[0]:
                                 positions1.pop(0)
                             else:
                                 positions2.pop(0)
@@ -162,7 +164,7 @@ def apply_query_on_documents(query: List[str], terms: List[Term]) -> Dict:
                     post1_keys.pop(0)
                     post2_keys.pop(0)
                 else:
-                    if post1_keys[0] > post2_keys[0]:
+                    if post1_keys[0] < post2_keys[0]:
                         post1_keys.pop(0)
                     else:
                         post2_keys.pop(0)
@@ -249,9 +251,9 @@ if __name__ == "__main__":
     
     terms = build_terms(convert_documents_to_tokens())
 
-    # display_terms(terms)
+    display_terms(terms)
     
-    query = "An information retrieval process begins when a user enters a query into the system"
+    query = "example search"
     query_tokens = query_optimization(query)
     print(f"Query: {query_tokens}")
     docs_matched = apply_query_on_documents(query_tokens, terms)
@@ -259,7 +261,8 @@ if __name__ == "__main__":
 
     if len(docs_matched) > 0:
         # Display TF.IDF matrix
-        # display_TF_IDF_matrix(terms)
+        
+        display_TF_IDF_matrix(terms)
         documents_lengths = compute_documents_lengths(terms, Term.documents_number)
 
         # compute similarities with the query and all documents
@@ -287,7 +290,7 @@ if __name__ == "__main__":
         for value in similarity_query_terms.values():
             value['normalized'] = value['tf_idf'] / query_length
 
-        # Calculating the similarities with all documents and the query
+        # Sorting and calculating the similarities between all documents and the query
         document_similarities = dict()
         for i in range(Term.documents_number):
             document_similarities[i] = compute_similarity(i, similarity_query_terms, terms)
