@@ -1,2 +1,0 @@
-In information retrieval a query does not uniquely identify a single object in the collection
-In information retrieval a query does not uniquely identify a single object in the collection

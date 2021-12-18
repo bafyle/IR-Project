@@ -1,2 +1,0 @@
-instead, several objects may match the query, perhaps with different degrees of relevancy.
-instead, several objects may match the query, perhaps with different degrees of relevancy.
