@@ -118,7 +118,10 @@ def display_terms(terms: list[Term]):
     for term in terms:
         row = f"{term.word}, {term.frequency}\n"
         for document, positions in term.postings_list.items():
-            row +=f"{document}: {positions}\n"
+            row +=f"{document}: {positions} TF: {term.frequency_in_each_doc[document]}" \
+                f", TF Weight: {term.get_TF_weight(document):.5f}, TF.IDF: {term.get_TF_IDF(document):.5f}\n"
+                #f", Normalized TF.TDF: {term.get_normalized_length()}"
+        row += f'DF: {term.frequency}\n'
         print(row)
 
 
@@ -174,35 +177,11 @@ def apply_query_on_documents(query: List[str], terms: List[Term]) -> Dict:
             results = terms[indices[0]].postings_list
         else:
             results = {}
-
-    
-    # if len(indices) >= 2:
-    #     post1 = terms[indices[0]].postings_list
-    #     indices.pop(0)
-    #     while len(indices):
-    #         post2 = terms[indices[0]].postings_list
-    #         for key, post1_value in post1.items():
-    #             for key2, post2_value in post2.items():
-    #                 if key == key2:
-    #                     positions1 = []
-    #                     for i in post1_value:
-    #                         for f in post2_value:
-    #                             if abs(i-f) == 1:
-    #                                 positions1.append(max(i, f))
-    #                     if any(positions1):
-    #                         results[key] = positions1
-    #             if key in post2:
-    #                 pass   
-    #         post1 = results
-    #         indices.pop(0)
-    # else:
-    #     if len(indices) == 1:
-    #         results = terms[indices[0]].postings_list
-    #     else:
-    #         results = {}
     return results
 
+
 ############## Part 3 ##############
+
 
 def display_TF_IDF_matrix(terms):
     """
@@ -233,15 +212,15 @@ def compute_documents_lengths(terms: list, number_of_documents: int) -> list:
         index += 1
     return output
 
-def compute_similarity(document_ID, query_terms, terms) -> float:
+def compute_similarity(document_ID: int, query_terms: dict, terms: list[Term]) -> float:
     """
-    This function computes the similarity between a query and a document
+    Computes the similarity between a query and a document
+    by calculating all TF IDF in the documents and 
     """
-    tfidfs = list() # list of all TF.IDF of all terms for that document
+    tfidfs = list() # list of all TF.IDF of all terms in that document
     for term in terms:
         tfidfs.append(term.get_TF_IDF(document_ID))
     
-
     output = 0 # output will be equal to the sum of product of all normalized values in the query with all terms' normalized values for that document
     for key in query_terms:
         output += query_terms[key]['normalized'] * terms[Term.search_for_term(terms, key)].get_normalized_length(tfidfs, document_ID)
@@ -253,7 +232,7 @@ if __name__ == "__main__":
 
     display_terms(terms)
     
-    query = "example search"
+    query = input("Enter Query: ")
     query_tokens = query_optimization(query)
     print(f"Query: {query_tokens}")
     docs_matched = apply_query_on_documents(query_tokens, terms)
@@ -263,7 +242,7 @@ if __name__ == "__main__":
         # Display TF.IDF matrix
         
         display_TF_IDF_matrix(terms)
-        documents_lengths = compute_documents_lengths(terms, Term.documents_number)
+        # documents_lengths = compute_documents_lengths(terms, Term.documents_number)
 
         # compute similarities with the query and all documents
         """
@@ -295,7 +274,7 @@ if __name__ == "__main__":
         for i in range(Term.documents_number):
             document_similarities[i] = compute_similarity(i, similarity_query_terms, terms)
         sorted_document_similarities_indices = sorted(document_similarities, key=lambda x: document_similarities[x], reverse=True)
-        
+        print(f"Query: {similarity_query_terms}")        
         for i in range(Term.documents_number):
             print(f"Similarity between the query and document number {sorted_document_similarities_indices[i]} is {document_similarities.get(sorted_document_similarities_indices[i])}")
         

@@ -48,7 +48,7 @@ class Term:
 
     
     def get_normalized_length(self, tfidf: list[float], document_id: int):
-        return self.get_TF_IDF(document_id) / Term.get_length(tfidf)
+        return self.get_TF_IDF(document_id) / Term.get_length_using_tfidf(tfidf)
 
 
     def __eq__(self, __o: object) -> bool:
@@ -146,7 +146,8 @@ class Term:
     
 
     @staticmethod
-    def get_length(tfidf: list[float]):
+    def get_length_using_tfidf(tfidf: list[float]):
+        """Compute the length of a document by passing all TF.IDF values in that document """
         sqrt_number = 0
         for idf in tfidf:
             sqrt_number += idf ** 2
