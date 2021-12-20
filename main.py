@@ -6,6 +6,21 @@ from term import Term
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 
+##############################################
+import re
+numbers = re.compile(r'(\d+)')
+
+def numericalSort(value):
+    """
+    Numerical sorting function for sorting files in a numerical order.
+    This function is used only and only for sorting files' names from glob
+    """
+    parts = numbers.split(value)
+    parts[1::2] = map(int, parts[1::2])
+    return parts
+##############################################
+
+
 ############## Part 1 ##############
 
 def remove_stop_words(words: List[str]):
@@ -26,11 +41,14 @@ def remove_punc(words: List[str]):
     return [w for w in words if w.isalnum()]
 
 
-def query_optimization(query: str) -> list:
+def line_optimization(query: str, remove_stop: bool = False) -> list:
     """
     return a list of all tokens in the query after preprocessing
     """
-    return remove_punc(remove_stop_words(word_tokenize(query.strip().lower())))
+    if remove_stop:
+        return remove_punc(remove_stop_words(word_tokenize(query.strip().lower())))
+    else:
+        return remove_punc(word_tokenize(query.strip().lower()))
 
 
 def convert_documents_to_tokens() -> dict:
@@ -56,15 +74,16 @@ def convert_documents_to_tokens() -> dict:
         print("loading all default documents")
         documents = default_documents
     
+    documents.sort(key=numericalSort)
     # set documents number
     Term.documents_number = len(documents)
 
     for _, document_name in enumerate(documents):
-        print(f"Document id {_} is: {document_name}")
+        print(f"Document id {_} is: '{document_name}'")
         with open(document_name, 'r') as document:
             lines = list(map(str.lower, map(str.strip, document.readlines())))
             for line in lines:
-                tokens_in_one_line = remove_punc(remove_stop_words(word_tokenize(line)))
+                tokens_in_one_line = line_optimization(line)
                 if documents_tokens.get(doc_id) == None:
                     documents_tokens[doc_id] = tokens_in_one_line
                 else:
@@ -115,13 +134,14 @@ def display_terms(terms: list[Term]):
     """
     Displays all terms in the same structure as asked in the project requirements PDF
     """
+    print("Postings list for all terms:")
     for term in terms:
-        row = f"{term.word}, {term.frequency}\n"
+        row = f"{term.word}, DF: {term.frequency}\n"
         for document, positions in term.postings_list.items():
             row +=f"{document}: {positions} TF: {term.frequency_in_each_doc[document]}" \
                 f", TF Weight: {term.get_TF_weight(document):.5f}, TF.IDF: {term.get_TF_IDF(document):.5f}\n"
                 #f", Normalized TF.TDF: {term.get_normalized_length()}"
-        row += f'DF: {term.frequency}\n'
+        row += f"IDF: {term.IDF:.4f}\n"
         print(row)
 
 
@@ -137,7 +157,10 @@ def apply_query_on_documents(query: List[str], terms: List[Term]) -> Dict:
         index = Term.search_for_term(terms, term)
         if index is not None:
             indices.append(index)
-    indices.sort(key=lambda x: len(terms[x].postings_list))
+    if len(indices) != len(query):
+        return {}
+    
+    # indices.sort(key=lambda x: len(terms[x].postings_list))
     
     results = dict()
     if len(indices) >= 2:
@@ -153,6 +176,7 @@ def apply_query_on_documents(query: List[str], terms: List[Term]) -> Dict:
                     positions1 = post1[post1_keys[0]]
                     positions2 = post2[post2_keys[0]]
                     while min(len(positions1), len(positions2)) != 0:
+                        # if abs(positions2[0] - positions1[0]) == 1:
                         if positions2[0] - positions1[0] == 1:
                             positions_list.append(positions2[0])
                             positions1.pop(0)
@@ -187,15 +211,16 @@ def display_TF_IDF_matrix(terms):
     """
     Displays the TF.IDF Matrix for all terms in terminal or console
     """
-    header = "\t\t\t\t"
+    header = "TF IDF matrix\t\t\t"
     for i in range(10):
         header += f'Doc{i}\t'
     print(header)
     for term in terms:
         row = f"Term: {term.word}\t\t\t"
         for i in range(10):
-            row += f"{term.get_TF_IDF(i):.2f}\t"
+            row += f"{term.get_TF_IDF(i):.3f}\t"
         print(row)
+    print()
 
 
 def compute_documents_lengths(terms: list, number_of_documents: int) -> list:
@@ -226,23 +251,47 @@ def compute_similarity(document_ID: int, query_terms: dict, terms: list[Term]) -
         output += query_terms[key]['normalized'] * terms[Term.search_for_term(terms, key)].get_normalized_length(tfidfs, document_ID)
     return output
 
+
+def display_normalized_TF_IDF(terms: List[Term], document_lengths: List[float]):
+
+    print("Normalized TF IDF")
+    header = "\t\t\t\t"
+    for i in range(10):
+        header += f'Doc{i}\t'
+    print(header)
+    for term in terms:
+        row = f"Term: {term.word}\t\t\t"
+        for index, len in enumerate(document_lengths):
+            row += f"{term.get_TF_IDF(index) / len:.3f}\t"
+        print(row)
+    print()
+
+
 if __name__ == "__main__":
     
     terms = build_terms(convert_documents_to_tokens())
 
     display_terms(terms)
-    
+
+    # Display TF.IDF matrix    
+    display_TF_IDF_matrix(terms)
+
+    # printing documents lengths
+    print("Documents lengths")
+    documents_lengths = compute_documents_lengths(terms, Term.documents_number)
+    for index, length in enumerate(documents_lengths):
+        print(f"Document ID {index} length: {length}")
+    print()
+
+    display_normalized_TF_IDF(terms, documents_lengths)
+
     query = input("Enter Query: ")
-    query_tokens = query_optimization(query)
+    query_tokens = line_optimization(query)
     print(f"Query: {query_tokens}")
     docs_matched = apply_query_on_documents(query_tokens, terms)
-    print(f"documents matched: {docs_matched}")
+    print(f"documents matched: {docs_matched}\n")
 
     if len(docs_matched) > 0:
-        # Display TF.IDF matrix
-        
-        display_TF_IDF_matrix(terms)
-        # documents_lengths = compute_documents_lengths(terms, Term.documents_number)
 
         # compute similarities with the query and all documents
         """
@@ -256,7 +305,8 @@ if __name__ == "__main__":
         # Building the structure of the tokens from the query
         similarity_query_terms = dict()
         for query_token in query_tokens:
-            similarity_query_terms[query_token] = {'tf': 1, 'tf_weight': 1, 'idf': terms[Term.search_for_term(terms, query_token)].IDF, 'df': terms[Term.search_for_term(terms, query_token)].frequency}
+            term_from_terms = terms[Term.search_for_term(terms, query_token)]
+            similarity_query_terms[query_token] = {'tf': 1, 'tf_weight': 1, 'idf': term_from_terms.IDF, 'df': term_from_terms.frequency}
 
         # Calculating the query length
         sum_of_query_IDFS = 0
@@ -269,12 +319,20 @@ if __name__ == "__main__":
         for value in similarity_query_terms.values():
             value['normalized'] = value['tf_idf'] / query_length
 
+
+        # Printing all details of the query
+        print(f"Query details\nQuery Length: {query_length}")
+        for query_token in similarity_query_terms:
+            query_term = similarity_query_terms[query_token]
+            print(f"Token: {query_token}, TF: {query_term['tf']}, TF Weight: {query_term['tf_weight']}, " \
+                    f"IDF: {query_term['idf']:.4f}, TF IDF: {query_term['tf_idf']:.4f}, normalized value: {query_term['normalized']:.4f}")
+        print()
+
         # Sorting and calculating the similarities between all documents and the query
         document_similarities = dict()
         for i in range(Term.documents_number):
             document_similarities[i] = compute_similarity(i, similarity_query_terms, terms)
         sorted_document_similarities_indices = sorted(document_similarities, key=lambda x: document_similarities[x], reverse=True)
-        print(f"Query: {similarity_query_terms}")        
         for i in range(Term.documents_number):
-            print(f"Similarity between the query and document number {sorted_document_similarities_indices[i]} is {document_similarities.get(sorted_document_similarities_indices[i])}")
+            print(f"Similarity between the query and document number {sorted_document_similarities_indices[i]} is {document_similarities.get(sorted_document_similarities_indices[i]):.4f}")
         
