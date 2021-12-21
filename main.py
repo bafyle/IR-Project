@@ -3,36 +3,21 @@ from typing import Dict, List
 
 import glob
 from term import Term
-from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-
-##############################################
-import re
-numbers = re.compile(r'(\d+)')
-
-def numericalSort(value):
-    """
-    Numerical sorting function for sorting files in a numerical order.
-    This function is used only and only for sorting files' names from glob
-    """
-    parts = numbers.split(value)
-    parts[1::2] = map(int, parts[1::2])
-    return parts
-##############################################
-
+from utils import numericalSort, custom_stopwords, search
 
 ############## Part 1 ##############
+
 
 def remove_stop_words(words: List[str]):
     """
     Removes the stop words from a list of words OUTPLACE
     """
-    stop_words = stopwords.words("english")
     for index, word in enumerate(words):
-        if word in stop_words:
+        if word in custom_stopwords:
             words.pop(index)
-
     return words
+
 
 def remove_punc(words: List[str]):
     """
@@ -41,14 +26,11 @@ def remove_punc(words: List[str]):
     return [w for w in words if w.isalnum()]
 
 
-def line_optimization(query: str, remove_stop: bool = False) -> list:
+def line_optimization(query: str) -> list:
     """
     return a list of all tokens in the query after preprocessing
     """
-    if remove_stop:
-        return remove_punc(remove_stop_words(word_tokenize(query.strip().lower())))
-    else:
-        return remove_punc(word_tokenize(query.strip().lower()))
+    return remove_punc(remove_stop_words(word_tokenize(query.strip().lower())))
 
 
 def convert_documents_to_tokens() -> dict:
@@ -154,13 +136,12 @@ def apply_query_on_documents(query: List[str], terms: List[Term]) -> Dict:
     ## Search for query in terms list
     indices = list()
     for term in query:
-        index = Term.search_for_term(terms, term)
+        index = search(terms, term)
         if index is not None:
             indices.append(index)
+    
     if len(indices) != len(query):
         return {}
-    
-    # indices.sort(key=lambda x: len(terms[x].postings_list))
     
     results = dict()
     if len(indices) >= 2:
@@ -176,7 +157,6 @@ def apply_query_on_documents(query: List[str], terms: List[Term]) -> Dict:
                     positions1 = post1[post1_keys[0]]
                     positions2 = post2[post2_keys[0]]
                     while min(len(positions1), len(positions2)) != 0:
-                        # if abs(positions2[0] - positions1[0]) == 1:
                         if positions2[0] - positions1[0] == 1:
                             positions_list.append(positions2[0])
                             positions1.pop(0)
@@ -237,23 +217,19 @@ def compute_documents_lengths(terms: list, number_of_documents: int) -> list:
         index += 1
     return output
 
-def compute_similarity(document_ID: int, query_terms: dict, terms: list[Term]) -> float:
+
+def compute_similarity(document_ID: int, query_terms: dict, terms: list[Term], doc_length: float) -> float:
     """
     Computes the similarity between a query and a document
     by calculating all TF IDF in the documents and 
     """
-    tfidfs = list() # list of all TF.IDF of all terms in that document
-    for term in terms:
-        tfidfs.append(term.get_TF_IDF(document_ID))
-    
     output = 0 # output will be equal to the sum of product of all normalized values in the query with all terms' normalized values for that document
     for key in query_terms:
-        output += query_terms[key]['normalized'] * terms[Term.search_for_term(terms, key)].get_normalized_length(tfidfs, document_ID)
+        output += query_terms[key]['normalized'] * terms[search(terms, key)].get_normalized_length(doc_length, document_ID)
     return output
 
 
 def display_normalized_TF_IDF(terms: List[Term], document_lengths: List[float]):
-
     print("Normalized TF IDF")
     header = "\t\t\t\t"
     for i in range(10):
@@ -305,7 +281,7 @@ if __name__ == "__main__":
         # Building the structure of the tokens from the query
         similarity_query_terms = dict()
         for query_token in query_tokens:
-            term_from_terms = terms[Term.search_for_term(terms, query_token)]
+            term_from_terms = terms[search(terms, query_token)]
             similarity_query_terms[query_token] = {'tf': 1, 'tf_weight': 1, 'idf': term_from_terms.IDF, 'df': term_from_terms.frequency}
 
         # Calculating the query length
@@ -331,7 +307,7 @@ if __name__ == "__main__":
         # Sorting and calculating the similarities between all documents and the query
         document_similarities = dict()
         for i in range(Term.documents_number):
-            document_similarities[i] = compute_similarity(i, similarity_query_terms, terms)
+            document_similarities[i] = compute_similarity(i, similarity_query_terms, terms, documents_lengths[i])
         sorted_document_similarities_indices = sorted(document_similarities, key=lambda x: document_similarities[x], reverse=True)
         for i in range(Term.documents_number):
             print(f"Similarity between the query and document number {sorted_document_similarities_indices[i]} is {document_similarities.get(sorted_document_similarities_indices[i]):.4f}")

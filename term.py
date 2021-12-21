@@ -47,8 +47,8 @@ class Term:
         return self.get_TF_weight(document_id) * self.IDF
 
     
-    def get_normalized_length(self, tfidf: list[float], document_id: int):
-        return self.get_TF_IDF(document_id) / Term.get_length_using_tfidf(tfidf)
+    def get_normalized_length(self, doc_length: float, document_id: int):
+        return self.get_TF_IDF(document_id) / doc_length
 
 
     def __eq__(self, __o: object) -> bool:
@@ -127,28 +127,3 @@ class Term:
 
     def __repr__(self) -> str:
         return self.__str__()
-
-
-    @staticmethod
-    def search_for_term(terms: list, term: str) -> int:
-        low = 0
-        high = len(terms) - 1
-        while low <= high:
-            mid = (low + high) // 2
-            guess = terms[mid]
-            if guess == term:
-                return mid
-            if guess > term:
-                high = mid - 1
-            else:
-                low = mid + 1
-        return None
-    
-
-    @staticmethod
-    def get_length_using_tfidf(tfidf: list[float]):
-        """Compute the length of a document by passing all TF.IDF values in that document """
-        sqrt_number = 0
-        for idf in tfidf:
-            sqrt_number += idf ** 2
-        return math.sqrt(sqrt_number)
