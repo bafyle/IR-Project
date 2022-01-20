@@ -55,7 +55,6 @@ def convert_documents_to_tokens() -> dict:
     else:
         print("loading all default documents")
         documents = default_documents
-    
     documents.sort(key=numericalSort)
     # set documents number
     Term.documents_number = len(documents)
@@ -92,7 +91,7 @@ def get_distincit_tokens(documents_tokens):
     # print(tokens_set)
     return tokens_set
 
-def build_terms(documents_tokens) -> list[Term]:
+def build_terms(documents_tokens) -> List[Term]:
     """
     Return a list of terms from all tokens that is brought from the documents collection
     """
@@ -112,7 +111,7 @@ def build_terms(documents_tokens) -> list[Term]:
     return terms
 
 
-def display_terms(terms: list[Term]):
+def display_terms(terms: List[Term]):
     """
     Displays all terms in the same structure as asked in the project requirements PDF
     """
@@ -218,7 +217,7 @@ def compute_documents_lengths(terms: list, number_of_documents: int) -> list:
     return output
 
 
-def compute_similarity(document_ID: int, query_terms: dict, terms: list[Term], doc_length: float) -> float:
+def compute_similarity(document_ID: int, query_terms: dict, terms: List[Term], doc_length: float) -> float:
     """
     Computes the similarity between a query and a document
     by calculating all TF IDF in the documents and 
